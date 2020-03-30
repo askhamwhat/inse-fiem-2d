@@ -42,9 +42,9 @@ end
 function gradient_kernel_weights(tau, dtau, nu, kappa, tau1, tau2, nu1, nu2,
                                  omega, omega1, omega2, 
                                  z, alpha, wL, wC, wQ, wT, DD, partint::Bool)
-    tauminusz = tau - z
+    tauminusz = tau .- z
     # Complex panel differentiation matrix
-    DDtau = diagm(1 ./ (DD*tau))*DD    
+    DDtau = Diagonal(1 ./ (DD*tau))*DD    
     domegadtau = DDtau*omega
     domegabardtau = DDtau*conj(omega)    
     DUDX, DUDY = _smoothlog_term(tauminusz, nu, dtau, wL, wC, alpha)
@@ -145,23 +145,23 @@ function _stresslet_term(omega, domegadtau, domegabardtau,
         )
         dfdz_corr = 0.0        
         dfdzbar = (
-            + conj(wQ).'*omega
-            + conj(conj(nu).^2.*wQ).'*conj(omega)
-            + conj((wQ.*conj(tauminusz)).'*domegadtau
-                   - (wQ.*conj(nu.^2)).'*omega)
+            + transpose(conj(wQ))*omega
+            + transpose(conj((conj(nu).^2).*wQ))*conj(omega)
+            + conj(transpose(wQ.*conj(tauminusz))*domegadtau
+                   - transpose(wQ.*conj(nu.^2))*omega)
         )
         fG(tau, omega, nu) = -conj( omega.*conj(tau-z)./(tau-z).^2 )
         dfdzbar_corr = fG(tau2,omega2,nu2)-fG(tau1,omega1,nu1)        
     else
         # Direct derivatives
         dfdz = (
-            -(wQ.'*omega + conj(wQ).'*conj(omega))
+            -(transpose(wQ)*omega + transpose(conj(wQ))*conj(omega))
         )
         dfdz_corr = 0.0        
         dfdzbar = (
-            + conj(wQ).'*omega
-            + conj(conj(nu).^2 .* wQ).'*conj(omega)
-            + 2*conj(conj(tauminusz).*wT).'*conj(omega)
+            + transpose(conj(wQ))*omega
+            + transpose(conj(conj(nu).^2 .* wQ))*conj(omega)
+            + 2*transpose(conj(conj(tauminusz).*wT))*conj(omega)
         )
         dfdzbar_corr = 0.0
     end
@@ -169,35 +169,35 @@ function _stresslet_term(omega, domegadtau, domegabardtau,
     dudx = (dfdz + dfdzbar)/(-4*1im*pi)
     dudy = 1im*(dfdz - dfdzbar)/(-4*1im*pi)
 
-    dudx_corr = (dfdz_corr + dfdzbar_corr)/(-4*1im*pi)
-    dudy_corr = 1im*(dfdz_corr - dfdzbar_corr)/(-4*1im*pi)    
-    return (dudx + dudx_corr,
-            dudy + dudy_corr)
+    dudx_corr = (dfdz_corr .+ dfdzbar_corr)/(-4*1im*pi)
+    dudy_corr = 1im*(dfdz_corr .- dfdzbar_corr)/(-4*1im*pi)    
+    return (dudx .+ dudx_corr,
+            dudy .+ dudy_corr)
 end
 
 function _cauchy_term(omega, dtau, z, tauminusz, wC, wQ, domegadtau, nu, alpha, tau1, tau2, omega1, omega2, partint)
     ##### CAUCHY PART
     # Direct derivatives
     dfdz_dir = (
-        + dtau.'*conj(omega)
-        - conj(dtau).'*omega
-        - 2*(tauminusz.*conj(wC)).'*conj(omega)
+        + transpose(dtau)*conj(omega)
+        - transpose(conj(dtau))*omega
+        - 2*transpose((tauminusz.*conj(wC)))*conj(omega)
     )
     
     dfdzbar_dir = (
-        + dtau.'*omega
-        + conj(conj(tauminusz.^2).*wQ).'*conj(omega)
+        + transpose(dtau)*omega
+        + transpose(conj(conj(tauminusz.^2).*wQ))*conj(omega)
     )
 
     partint = false # Partial integration of this terms has no benefit
     if partint    
         # Partial integration:
         fG(tau,omega) = -conj( omega.*conj(tau-z).^2 ./ (tau-z) )
-        dfdzbar_pi = (dtau.'*omega
+        dfdzbar_pi = (transpose(dtau)*omega
                       + conj(
-                          (conj(tauminusz.^2).*wC).'*domegadtau
+                          transpose(conj(tauminusz.^2).*wC)*domegadtau
                           +
-                          (2 .* conj(tauminusz).*(-conj(nu.^2)).*wC).'*omega
+                          transpose(2 .* conj(tauminusz).*(-conj(nu.^2)).*wC)*omega
                       )
                       ) + fG(tau2,omega2)-fG(tau1,omega1)
         # Put it together

@@ -2,10 +2,11 @@ push!(LOAD_PATH, string(pwd(),"/src"))
 
 using ModifiedStokesSolver
 import AnalyticDomains
-using Base.Test
+using Test
 using PyPlot
 import IterativeSolvers
-
+using LinearAlgebra
+using Random
 
 @testset "MultiplyConnected" begin
 
@@ -21,10 +22,10 @@ import IterativeSolvers
     # Setup problem
     xsrc1 = [0.01, 0.02]
     xsrc2 = [1.0, 1.0]
-    srand(1)
-    qsrc = 1-2*rand(2)
-    nsrc = 1-2*rand(2)
-    fsrc = 1-2*rand(2)
+    Random.seed!(1)
+    qsrc = 1 .- 2*rand(2)
+    nsrc = 1 .- 2*rand(2)
+    fsrc = 1 .- 2*rand(2)
     ubc(x) = stresslet(x-xsrc1, qsrc, nsrc, alpha) +
         stokeslet(x-xsrc1, fsrc, alpha) +
         stresslet(x-xsrc2, qsrc, nsrc, alpha) +
@@ -39,7 +40,7 @@ import IterativeSolvers
     # Right hand side
     rhs = zeros(2*N)
     for i=1:dcurve.numpoints
-        rhs[2(i-1)+(1:2)] = ubc(dcurve.points[:,i])
+        rhs[2(i-1) .+ (1:2)] = ubc(dcurve.points[:,i])
     end
 
     # Dense matrix 
@@ -63,22 +64,22 @@ import IterativeSolvers
     xmin = minimum(dcurve.points[1,:])
     ymax = maximum(dcurve.points[2,:])
     ymin = minimum(dcurve.points[2,:])
-    x = linspace(xmin, xmax, Ngrid)
-    y = linspace(ymin, ymax, Ngrid)
+    x = range(xmin, stop=xmax, length=Ngrid)
+    y = range(ymin, stop=ymax, length=Ngrid)
     X, Y = ndgrid(x, y)
-    zt = [vec(X) vec(Y)]'
+    zt = copy(transpose([vec(X) vec(Y)]))
     interior = interior_points(dcurve, zt)
     numeval = sum(interior)
     zt_interior = zt[:, interior]
     @time u = doublelayer_fast(dcurve, density, zt_interior, alpha, specquad=true)
-    uref = Array{Float64}(2, numeval)    
+    uref = Array{Float64}(undef,2, numeval)    
     for i=1:numeval
         uref[:,i] = ubc(zt_interior[:, i])
     end
     unorm = norm(vec(uref), Inf)
     # Error
     err = u .- uref
-    maxerr = Array{Float64}(numeval)
+    maxerr = Array{Float64}(undef,numeval)
     for i=1:numeval
         maxerr[i] = norm(err[:, i], Inf)
     end
@@ -88,7 +89,7 @@ import IterativeSolvers
     @test max_relerr_grid < 1e-13
 
     # Plot
-    E = zeros(X)
+    E = zero(X)
     E[interior] = maxerr
     clf()
     pcolor(X, Y, log10.(E))

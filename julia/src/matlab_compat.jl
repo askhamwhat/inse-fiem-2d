@@ -4,8 +4,8 @@ function ndgrid(x, y)
     ny = length(y)
     vartype = typeof(x[1])
     @assert typeof(y[1])==vartype
-    X = Array{vartype}(nx, ny)
-    Y = Array{vartype}(nx, ny)
+    X = Array{vartype}(undef,nx, ny)
+    Y = Array{vartype}(undef,nx, ny)
     for i=1:nx
         for j=1:ny
             X[i,j] = x[i]

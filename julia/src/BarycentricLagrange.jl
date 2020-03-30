@@ -11,7 +11,7 @@ export bclag_interp_weights
 function bclag_interp_eval(x, f, xi, w)
     # fi = bclag_interp_eval(x, f, xi, w)
     # xi scalar, not in x
-    tmp = w ./ (xi - x)
+    tmp = w ./ (xi .- x)
     fi = sum(f.*tmp)/sum(tmp)
     return fi
 end
@@ -41,7 +41,7 @@ function bclag_interp_matrix(x, xi, w)
     B ./= denom
     for jj=1:N
         if exact[jj] != 0
-            B[jj,:] = 0.0
+            B[jj,:] .= 0.0
             B[jj + N*(exact[jj]-1)] = 1.0
         end
     end
@@ -54,7 +54,7 @@ function bclag_interp_weights(x)
     n = length(x);
     w = zeros(n);
     for j=1:n
-        w[j] = 1/prod(x[j]-x[1:n.!=j]);
+        w[j] = 1/prod(x[j] .- x[1:n.!=j]);
     end
     return w
 end

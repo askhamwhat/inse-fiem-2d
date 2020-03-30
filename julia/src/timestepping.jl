@@ -28,7 +28,7 @@ end
 
 function sdc_integration(M)
     # Setup substeps
-    x = collect(linspace(-1, 1, M))
+    x = collect(range(-1,stop=1, length=M))
     # Vandermonde matrix (transposed)
     At = ones(M,M)
     for m=2:M
@@ -131,8 +131,8 @@ function step_sdc(dt, order, sol, solver, ubc1, ubc2)
         corr1 = solutions[P, K].U1 - solutions[P, K-1].U1
         corr2 = solutions[P, K].U2 - solutions[P, K-1].U2
         sol = solutions[P,K]        
-        info("U1 SDC err est: l2=", l2norm(corr1)/l2norm(sol.U1),", max=", maxnorm(corr1)/maxnorm(sol.U1))
-        info("U2 SDC err est: l2=", l2norm(corr2)/l2norm(sol.U2),", max=", maxnorm(corr2)/maxnorm(sol.U2))
+        @info "U1 SDC err est" l2err=l2norm(corr1)/l2norm(sol.U1) maxerr=maxnorm(corr1)/maxnorm(sol.U1))
+        @info "U2 SDC err est" l2err=l2norm(corr2)/l2norm(sol.U2) maxerr=maxnorm(corr2)/maxnorm(sol.U2))
     end    
     return solutions[P,K]
 

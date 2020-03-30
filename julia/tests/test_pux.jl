@@ -5,10 +5,12 @@ using ModifiedStokesSolver
 using CurveDiscretization
 import AnalyticDomains
 using PUX
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 @testset "PUX" begin
-    srand(0)
+    Random.seed!(0)
     # Params
     alpha = 2.0
     numpanels = 10

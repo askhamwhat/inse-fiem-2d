@@ -34,7 +34,7 @@ function per_modstokes(F1, F2, L, lambda, xnu=[], ynu=[]; zerok0::Bool=false, if
         # (which we can let integral equation solver pick up)
         # NOTE: It's possible that this is true only because we are using an
         # ill-conditioned test case
-        info("Zeroing k=0 mode")        
+        @info "Zeroing k=0 mode"
         Uhat1[1,1], Uhat2[1,1] = 0.0, 0.0
     end
     
@@ -46,11 +46,11 @@ function per_modstokes(F1, F2, L, lambda, xnu=[], ynu=[]; zerok0::Bool=false, if
         # Rescale and shift points from [-L/2,L/2] to [0,2*pi]    
         xnu *= scale
         ynu *= scale
-        xnu += pi
-        ynu += pi
+        xnu .+= pi
+        ynu .+= pi
         # Compute        
-        unu1 = Array{Complex128}(Nnu)
-        unu2 = Array{Complex128}(Nnu)
+        unu1 = Array{ComplexF64}(undef,Nnu)
+        unu2 = Array{ComplexF64}(undef,Nnu)
         opts = finufft_default_opts()
         opts.modeord = 1
         nufft2d2!(xnu, ynu, unu1, 1, 1e-15, Uhat1, opts)
@@ -104,8 +104,8 @@ function per_gradient(F, L)
     k1, k2 = k_vectors([N, N], [L, L])
     k1 = ifftshift(k1)
     k2 = ifftshift(k2)
-    Fx = zeros(Fhat)
-    Fy = zeros(Fhat)
+    Fx = zero(Fhat)
+    Fy = zero(Fhat)
     for j=1:N
         for i=1:N
             K1 = k1[i]

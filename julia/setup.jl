@@ -1,3 +1,5 @@
+using Pkg
+
 Pkg.update()
 
 # Install required Julia packages
@@ -11,7 +13,7 @@ Pkg.add("SymPy")
 Pkg.add("PyCall")
 Pkg.add("LowRankApprox")
 Pkg.add("MATLAB")
-Pkg.add("NullableArrays")
+#Pkg.add("NullableArrays")
 Pkg.add("Revise")
 Pkg.add("FMMLIB2D")
 Pkg.add("FINUFFT")
@@ -22,3 +24,4 @@ Pkg.add("HDF5")
 Pkg.add("FileIO")
 Pkg.add("Humanize")
 Pkg.add("Interpolations")
+Pkg.add("FFTW")

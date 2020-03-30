@@ -1,11 +1,13 @@
 # Test code for identifiying inside/outside points
 
-using Base.Test
+using Test
 
 push!(LOAD_PATH, string(pwd(),"/src"))
 using PyPlot
 using ModifiedStokesSolver
 import AnalyticDomains
+using LinearAlgebra
+
 
 @testset "InsideOutside" begin
     # Discretize
@@ -15,12 +17,12 @@ import AnalyticDomains
     dcurve = discretize(curve, numpanels, panelorder)
 
     # Easy test
-    rgrid = linspace(0.01, 0.7-1e-8, 50)
-    tgrid = linspace(0, 2*pi, 500)
+    rgrid = range(0.01, stop=0.7-1e-8, length=50)
+    tgrid = range(0, stop=2*pi, length=500)
     R, T = ndgrid(rgrid, tgrid)
     X = R.*cos.(T)
     Y = R.*sin.(T)
-    zt = [X[:] Y[:]]'
+    zt = copy(transpose([X[:] Y[:]]))
     interior = interior_points(dcurve, zt)
     exterior = .!interior
     @test all(interior)
@@ -33,14 +35,14 @@ import AnalyticDomains
 
 
     # Hard test
-    rgrid = linspace(0, 2*pi, 1000)
-    igrid = linspace(-5e-2, 5e-2, 100)
+    rgrid = range(0, stop=2*pi, length=1000)
+    igrid = range(-5e-2, stop=5e-2, length=100)
     R, I = ndgrid(rgrid, igrid)
     Z = @. curve.tau(R + 1im*I)
     X = real(Z)
     Y = imag(Z)
 
-    zt = [X[:] Y[:]]'
+    zt = copy(transpose([X[:] Y[:]]))
     interior = interior_points(dcurve, zt)
     exterior = .!interior
 

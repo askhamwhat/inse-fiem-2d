@@ -2,11 +2,13 @@
 push!(LOAD_PATH, string(pwd(),"/src"))
 
 using ModifiedStokesSolver 
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 @testset "FreeSpaceSolver" begin
     # Setup problem
-    srand(1)
+    Random.seed!(1)
     L = 4.0
     lambda = 5.6
 
@@ -37,14 +39,14 @@ using Base.Test
 
     function solve(N)
         # Grid domain
-        x = linspace(-L/2, L/2, N+1)
+        x = range(-L/2, stop=L/2, length=N+1)
         x = x[1:end-1] # Note that intervals are closed/open!
         y = x
         X,Y = ndgrid(x, y)
         # Nonuniform test points
         M = 1000
-        xt = L*(1/2-rand(M, 1))
-        yt = L*(1/2-rand(M, 1))
+        xt = L*(1/2 .- rand(M, 1))
+        yt = L*(1/2 .- rand(M, 1))
 
         # Get rhs
         F1 = ffunc1.(X,Y)
@@ -80,8 +82,8 @@ using Base.Test
         Unorm = norm(sqrt.( vec(U1).^2 + vec(U2).^2 ), Inf)
         h = X[2]-X[1]
         int = 2:N-1
-        U1x = (U1[int+1,int]-U1[int-1,int])/(2*h)
-        U2y = (U2[int,int+1]-U2[int,int-1])/(2*h)
+        U1x = (U1[int .+ 1,int]-U1[int .- 1,int])/(2*h)
+        U2y = (U2[int,int .+ 1]-U2[int,int .- 1])/(2*h)
 
         P = pfunc.(X,Y)
         Pnorm = norm( vec(P), Inf)
@@ -89,11 +91,11 @@ using Base.Test
         Udiv = U1x+U2y
         diverr_rel = maximum(abs.(Udiv))/Unorm
 
-        LP = (-4*P[int,int] + P[int+1,int] + P[int-1,int] + P[int,int+1] + P[int,int-1])/h^2
-        Px = (P[int+1,int]-P[int-1,int])/(2*h)
-        Py = (P[int,int+1]-P[int,int-1])/(2*h)
-        LU1 = (-4*U1[int,int] + U1[int+1,int] + U1[int-1,int] + U1[int,int+1] + U1[int,int-1])/h^2
-        LU2 = (-4*U2[int,int] + U2[int+1,int] + U2[int-1,int] + U2[int,int+1] + U2[int,int-1])/h^2
+        LP = (-4*P[int,int] + P[int .+ 1,int] + P[int .- 1,int] + P[int,int .+ 1] + P[int,int .- 1])/h^2
+        Px = (P[int .+ 1,int]-P[int .- 1,int])/(2*h)
+        Py = (P[int,int .+ 1]-P[int,int .- 1])/(2*h)
+        LU1 = (-4*U1[int,int] + U1[int .+ 1,int] + U1[int .- 1,int] + U1[int,int .+ 1] + U1[int,int .- 1])/h^2
+        LU2 = (-4*U2[int,int] + U2[int .+ 1,int] + U2[int .- 1,int] + U2[int,int .+ 1] + U2[int,int .- 1])/h^2
 
         pde1 = LU1 - lambda^2*U1[int,int] - Px - F1[int,int]
         pde2 = LU2 - lambda^2*U2[int,int] - Py - F2[int,int]

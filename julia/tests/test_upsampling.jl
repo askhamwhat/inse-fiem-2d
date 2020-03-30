@@ -2,7 +2,8 @@ push!(LOAD_PATH, string(pwd(),"/src"))
 
 using ModifiedStokesSolver
 using FastGaussQuadrature
-using Base.Test
+using Test
+using LinearAlgebra
 
 panelorder1 = 32
 panelorder2 = 160

@@ -1,17 +1,19 @@
 push!(LOAD_PATH, string(pwd(),"/src"))
 using ModifiedStokesSolver
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 @testset "FMM" begin
     ## define source and target points
     ns = 100
     nt = 102
 
-    srand(1)
-    src = 1 - 2*rand(2,ns)
-    fvec = 1 - 2*rand(2,ns)
-    nvec = 1 - 2*rand(2,ns)
-    targ = 1 - 2*rand(2,nt)
+    Random.seed!(1)
+    src = 1 .- 2*rand(2,ns)
+    fvec = 1 .- 2*rand(2,ns)
+    nvec = 1 .- 2*rand(2,ns)
+    targ = 1 .- 2*rand(2,nt)
 
     # Compute using the kernels from ModifiedStokesSolver
     function mss_stokeslet_direct(src, targ, fvec, alpha)

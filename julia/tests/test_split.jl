@@ -1,16 +1,18 @@
 push!(LOAD_PATH, string(pwd(),"/src"))
 
 import ModifiedStokesSolver
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 mss = ModifiedStokesSolver
 
 @testset "Split" begin
 
-    srand(1)
-    r = 1 .- 2.*(rand(), rand())
-    f = 1 .- 2.*(rand(), rand())
-    n = 1 .- 2.*(rand(), rand())
+    Random.seed!(1)
+    r = 1 .- 2 .* (rand(), rand())
+    f = 1 .- 2 .* (rand(), rand())
+    n = 1 .- 2 .* (rand(), rand())
     rnorm = sqrt(r[1]^2+r[2]^2)
 
     cutoff = mss.POWERSERIES_ZMAX

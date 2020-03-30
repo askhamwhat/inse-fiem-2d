@@ -1,7 +1,7 @@
-using Base.Test
+using Test
 
 testdir = "tests/"
-tests = filter(x -> ismatch(r"^test_.*\.jl$", x), readdir(testdir))
+tests = filter(x -> occursin(r"^test_.*\.jl$", x), readdir(testdir))
 
 @testset "All tests" begin
     for t in tests

@@ -1,4 +1,4 @@
-__precompile__()
+__precompile__(false)
 
 module ModifiedStokesSolver
 
@@ -6,7 +6,9 @@ using Compat
 using Compat.Libdl
 using Compat.LinearAlgebra
 using Compat.MathConstants
-using Compat.@info
+using Compat: @info
+
+using Printf
 
 
 using PyCall

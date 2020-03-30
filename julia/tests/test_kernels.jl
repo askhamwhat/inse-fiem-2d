@@ -1,13 +1,13 @@
 push!(LOAD_PATH, string(pwd(),"/src"))
 
-using Compat.LinearAlgebra
-using Compat.Test
-using Compat.Random
+using LinearAlgebra
+using Test
+using Random
 
 using ModifiedStokesSolver
 
 @testset "Kernels" begin
-    srand(1)
+    Random.seed!(1)
     r = rand(2)
     f = rand(2)
     n = rand(2)

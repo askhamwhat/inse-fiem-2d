@@ -9,6 +9,9 @@ const RBFQR_MATLAB_SRC = "$(mydir)/../../external/rbf-qr"
 using MATLAB
 using PyPlot
 using CurveDiscretization
+using Printf
+using LinearAlgebra
+using SparseArrays
 
 export pux_params, pux_setup!, pux_eval
 
@@ -35,17 +38,17 @@ function pux_precompute(curves, dcurve, Ngrid, ep; P=0, R=0.0)
     # Setup volume grid
     Lgrid, Ngrid, X, Y = setup_volgrid(dcurve, Ngrid_int, P)
     xe = [vec(X) vec(Y)]
-    xet = xe'
+    xet = copy(transpose(xe))
     interior = interior_points(dcurve, xet)        
     # Setup PUX params, one setup per boundary
     if !isa(curves, Array)
         curves = [curves]
     end
     Ncurves = length(curves)
-    PUXStor = Array{PUXStorage}(Ncurves)
+    PUXStor = Array{PUXStorage}(undef,Ncurves)
     for i=1:Ncurves
         curve_i = curves[i]
-        idx = findin(dcurve.curvenum, i)
+        idx = findall(dcurve.curvenum .== i)
         arclength = sum(dcurve.dS[idx])    
         PUXStor[i] = pux_params(Lgrid/2, Ngrid, ep, P, arclength)
         # Get equispaced points
@@ -73,10 +76,7 @@ function pux_params(Lgrid, Ngrid, shape, support, arclength)
     R_part = P*hgrid
     R = R_part/R_ratio
 
-    info("PUX PARAMS:")
-    info("P = ", P)
-    info("R = ", R)
-    info("R_part = ", R_part)
+    @info "PUX PARAMS" P R R_part
     
     regularity = 0
     if regularity == 0
@@ -85,7 +85,7 @@ function pux_params(Lgrid, Ngrid, shape, support, arclength)
     # Number of Vogel points, i.e. RBF-centres. 
     n_RBFCentres = round(min(0.8*pi/4*P^2, 4*P))
     n_RBFCentres = min(n_RBFCentres, 200)
-    info("Number of Vogel nodes: ", n_RBFCentres)
+    @info "Number of Vogel nodes"  n_RBFCentres
 
     # Number of partitions
     n_Part = ceil(arcL/(2*R)) + 1    
@@ -103,7 +103,7 @@ function pux_params(Lgrid, Ngrid, shape, support, arclength)
         "arcL" => arcL
     )
     # Return PUXStorgae
-    stor = PUXStorage(PUXParams["n_Part"]*2, PUXParams, similar(PUXParams), false)
+    stor = PUXStorage(PUXParams["n_Part"]*2, PUXParams, empty(PUXParams), false)
     return stor
 end
 
@@ -120,7 +120,7 @@ end
 
 function pux_eval(f1, stor)
     # Dummy wrapper for vector PUX
-    f2 = zeros(f1)
+    f2 = zero(f1)
     u1, u2 = pux_eval_vec(f1, f2, stor)
     return u1
 end
@@ -136,8 +136,8 @@ function pux_eval_vec(f1::Array{Float64},
                       f2::Array{Float64},
                       stor_list::Array{PUXStorage};
                       limit_od::Float64=3.5)
-    fe1 = zeros(size(f1))
-    fe2 = zeros(size(f2))
+    fe1 = zero(f1)
+    fe2 = zero(f2)
     for curvenum = 1:length(stor_list)
         stor = stor_list[curvenum]
         @assert stor.PUXDataInit "Must run pux setup first!"
@@ -189,13 +189,13 @@ function pux_eval_vec(f1::Array{Float64},
         for i = 1:n_InterpPart
             ## Global indices
             # Indices of point in xe within R_Ip of parition center Ip(i).
-            idx_xeInInterpPart_i = idx_InterpPartCentres[i] + idx_xeInInterpPart_stencil
+            idx_xeInInterpPart_i = idx_InterpPartCentres[i] .+ idx_xeInInterpPart_stencil
             idx_xeInOmegaInInterpPart_i = idx_xeInInterpPart_i[idx_xeInOmega_boolean[idx_xeInInterpPart_i]]
             idx_xeInInterpPartOutOmega = idx_xeInInterpPart_i[.~idx_xeInOmega_boolean[idx_xeInInterpPart_i]]
             n_local_evals = length(idx_xeInInterpPartOutOmega)
             # Local indices
-            idx_local_xeInOmega = find(idx_xeInOmega_boolean[idx_xeInInterpPart_i])
-            idx_local_xeOutOmega = find(.~idx_xeInOmega_boolean[idx_xeInInterpPart_i])
+            idx_local_xeInOmega = findall(idx_xeInOmega_boolean[idx_xeInInterpPart_i][:])
+            idx_local_xeOutOmega = findall(.~idx_xeInOmega_boolean[idx_xeInInterpPart_i][:])
             
             if (coarsen > 1)
                 # Coarser grid. Samples points set by coarsen.
@@ -227,8 +227,7 @@ function pux_eval_vec(f1::Array{Float64},
             # Heuristic sanity check of extrapolation
             ext_rel_magn = max(ext_rel_magn, norm(Af, Inf) / norm(rhs, Inf))
         end
-        #info("PUX: maximum residual: $max_resnorm")
-        #info("PUX: extension rel. magnitude: $ext_rel_magn")
+        @info "PUX" max_resnorm ext_rel_magn
         if ext_rel_magn > 10
             #warn("PUX: Partitions too large?")
         end
@@ -244,9 +243,9 @@ function pux_eval_vec(f1::Array{Float64},
         Imat2 = sparse(If, Jf, Sf2, n_Boxpnts, n_Part)
         Imat2 = Imat2[idx_xeOutOmegaInInterpPart,:]    
         ## Combine local extensions into global extension
-        fe1[idx_xeOutOmegaInInterpPart] = full(sum(Imat1.*W, 2))
+        fe1[idx_xeOutOmegaInInterpPart] = sum(Imat1.*W, dims=2)
         fe1[idx_xeInOmega_boolean] = f1_collocation[idx_xeInOmega_boolean]
-        fe2[idx_xeOutOmegaInInterpPart] = full(sum(Imat2.*W, 2))
+        fe2[idx_xeOutOmegaInInterpPart] = sum(Imat2.*W, dims=2)
         fe2[idx_xeInOmega_boolean] = f2_collocation[idx_xeInOmega_boolean]
     end
     return fe1, fe2
@@ -254,10 +253,10 @@ end
 
 function plot_partitions(stor::PUXStorage)
     function partplot(clist, Rlist, style)
-        th = linspace(0, 2*pi)
+        th = range(0, stop=2*pi)
         for i=1:size(clist,1)
             c = clist[i,:]
-            plot(c[1] + Rlist[i]*cos.(th), c[2] + Rlist[i]*sin.(th), style)
+            plot(c[1] .+ Rlist[i]*cos.(th), c[2] .+ Rlist[i]*sin.(th), style)
         end
     end
     PUXData = stor.PUXData
@@ -281,7 +280,7 @@ function pux_params_matlab(Lgrid, Ngrid, shape, support, arclength)
     Ngrid = Float64(Ngrid)
     arclength = Float64(arclength)
     mat"$PUXParams = pux_params($Ngrid, $Lgrid, $pux_ep, $pux_P, $arclength)"
-    stor = PUXStorage(PUXParams["n_Part"]*2, PUXParams, similar(PUXParams), false)
+    stor = PUXStorage(PUXParams["n_Part"]*2, PUXParams, empty(PUXParams), false)
     return stor
 end
 
@@ -300,11 +299,11 @@ function setup_volgrid(grid::DiscreteCurve, Ngrid, pux_P)
     padding = 2*pux_P+2 # This should always accomodate PUs (which is right, 2*P or 4*P ???))
     Ngrid += padding
     Ngrid += Ngrid%2 # Even FFT grid is better
-    info("After padding Ngrid=$Ngrid")
+    @info "After padding" Ngrid
     Lgrid += padding*hgrid
     Lgrid *= exp(0.001)  # fudge factor to reduce number of grid points exactly on bdry
-    xgrid = linspace(-Lgrid/2, Lgrid/2, Ngrid+1)
-    ygrid = linspace(-Lgrid/2, Lgrid/2, Ngrid+1)
+    xgrid = range(-Lgrid/2, stop=Lgrid/2, length=Ngrid+1)
+    ygrid = range(-Lgrid/2, stop=Lgrid/2, length=Ngrid+1)
     xgrid = xgrid[1:end-1]
     ygrid = ygrid[1:end-1]
     X, Y = ndgrid(xgrid, ygrid)    
@@ -317,8 +316,8 @@ function ndgrid(x, y)
     ny = length(y)
     vartype = typeof(x[1])
     @assert typeof(y[1])==vartype
-    X = Array{vartype}(nx, ny)
-    Y = Array{vartype}(nx, ny)
+    X = Array{vartype}(undef,nx, ny)
+    Y = Array{vartype}(undef,nx, ny)
     for i=1:nx
         for j=1:ny
             X[i,j] = x[i]

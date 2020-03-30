@@ -1,6 +1,8 @@
 include("../../external/mbh2dfmm/julia/modbhrouts.jl")
 
 using FINUFFT
+using FFTW
+using SpecialFunctions
 
 ## FREESPACE SOLVER WITH NUFFT
 "
@@ -27,9 +29,9 @@ function fs_modstokes(F1, F2, L, lambda, xnu=[], ynu=[]; precomp=[])
     # Pad input to double size
     sf = 2
     N2 = sf*N
-    info("FFT size is $(N2)x$(N2)")    
-    Fpad1 = zeros(Complex128, N2, N2)
-    Fpad2 = zeros(Complex128, N2, N2)
+    @info "FFT size (2d)" N2
+    Fpad1 = zeros(ComplexF64, N2, N2)
+    Fpad2 = zeros(ComplexF64, N2, N2)
     Fpad1[1:N, 1:N] = F1
     Fpad2[1:N, 1:N] = F2
     # Do FFTs in-place
@@ -58,11 +60,11 @@ function fs_modstokes(F1, F2, L, lambda, xnu=[], ynu=[]; precomp=[])
         # TODO: Get this scaling right so we can use modeord=0
         origin = pi/sf
         scale = 2*pi/(sf*L)
-        xn = origin + xnu*scale
-        yn = origin + ynu*scale
+        xn = origin .+ xnu*scale
+        yn = origin .+ ynu*scale
         Nnu = length(xnu)
-        unu1 = Array{Complex128}(Nnu)
-        unu2 = Array{Complex128}(Nnu)
+        unu1 = Array{ComplexF64}(undef,Nnu)
+        unu2 = Array{ComplexF64}(undef,Nnu)
         opts = finufft_default_opts()
         opts.modeord = 1        
         nufft2d2!(xn, yn, unu1, 1, 1e-15, Uhat1, opts)
@@ -95,7 +97,7 @@ function fs_modbh_precomp(N, L, lambda)
     if mod(Nf,2) != 0
         Nf+=1 # Even grids are always faster (right?)
     end
-    info("Precompute FFT size is $(Nf)x$(Nf)")
+    @info "Precompute FFT (2d) size is " Nf
     sf = Nf/N # Effective oversampling
     R = sqrt(2)*L
     logR = log(R)
@@ -106,7 +108,7 @@ function fs_modbh_precomp(N, L, lambda)
     Q1 = qn[2,1]
     lam2 = lambda*lambda    
     # Compute
-    GR = Array{Complex128}(Nf, Nf)
+    GR = Array{ComplexF64}(undef,Nf, Nf)
     k1, k2 = k_vectors([Nf, Nf], [L*sf, L*sf])
     k1 = ifftshift(k1)
     k2 = ifftshift(k2)
@@ -131,7 +133,7 @@ function fs_modbh_precomp(N, L, lambda)
     ifft!(GR)    
     # GR now in real space and has rubbish in the center,
     # Truncate by picking out corner values
-    GRtrunc = Array{Complex128}(2*N, 2*N)    
+    GRtrunc = Array{ComplexF64}(undef,2*N, 2*N)    
     idx = 1:N
     offset = Nf - N
     for i=idx

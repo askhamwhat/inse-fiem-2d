@@ -13,7 +13,7 @@ bernstein_radius_q1(z) = abs(z + sqrt(z^2 - 1))
 q1(z) = abs(real(z)) + 1im*abs(imag(z))
 bernstein_radius(z) = bernstein_radius_q1(q1(z))
 
-rotate_and_scale(za, zb, z) = (za+zb)/(za-zb) + z*2/(zb-za)
+rotate_and_scale(za, zb, z) = (za+zb)/(za-zb) .+ z*2/(zb-za)
 complex2real(z) = [real(z), imag(z)]    
 tovec(x) = vec(x)
 fromvec(x) = reshape(x, 2, :)
@@ -64,7 +64,7 @@ end
     up = [0.0, 0.0]    
     rmin2 = Inf
     h = 0.0
-    for idx=grid.panelorder*(panel_idx-1) + (1:grid.panelorder)
+    for idx=grid.panelorder*(panel_idx-1) .+ (1:grid.panelorder)
         rvec1 = grid.points[1,idx]-target[1]
         rvec2 = grid.points[2,idx]-target[2]
         rnorm2 = rvec1*rvec1 + rvec2*rvec2
@@ -93,6 +93,8 @@ function dlp_panel_specquad_weights(grid,za, zb, zt, zj,
                                     glpoints2, glweights2,
                                     bcweights
                                     )
+
+    eye2 = Diagonal(ones(2))
     n = length(glpoints1)
     n_sub = length(glpoints2)        
     panel_length = sum(abs.(zpwj))
@@ -110,7 +112,7 @@ function dlp_panel_specquad_weights(grid,za, zb, zt, zj,
         tb = intervals[idx+1]
         troot_sub = (troot-ta)*2/(tb-ta) - 1.0
         # New source points, in original frame
-        tsrc = ta + (1+glpoints2)*(tb-ta)/2
+        tsrc = ta .+ (1 .+ glpoints2)*(tb-ta)/2
         # Interpolation to new source points
         Psub = bclag_interp_matrix(glpoints1, tsrc, bcweights)
         dt_sub = tb-ta
@@ -142,10 +144,10 @@ function dlp_panel_specquad_weights(grid,za, zb, zt, zj,
                     gradient_kernel_direct_weights(zj_sub, zpwj_sub, nuj_sub, zt, alpha)
             end
         end
-        S += S_sub*kron(Psub, eye(2))
+        S += S_sub*kron(Psub, eye2)
         if ifgrad
-            DUDXspec += DUDXspec_sub*kron(Psub, eye(2))
-            DUDYspec += DUDYspec_sub*kron(Psub, eye(2))
+            DUDXspec += DUDXspec_sub*kron(Psub, eye2)
+            DUDYspec += DUDYspec_sub*kron(Psub, eye2)
         end
     end        
     # Join weights into one matrix and return
@@ -404,9 +406,11 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                                   targets::Array{Float64},
                                   alpha::Float64;
                                   ifgrad::Bool=false)
+
+    eye2 = Diagonal(ones(2))
     # For each point on curve, keep a list of tuples: (target_idx, weights)
     WeightElement = Tuple{Int64,Array{Float64,2}}
-    weights = Array{Array{WeightElement}}(grid.numpanels)
+    weights = Array{Array{WeightElement}}(undef,grid.numpanels)
     for i=1:grid.numpanels
         weights[i] = Tuple[]
     end
@@ -427,10 +431,10 @@ function doublelayer_near_weights(grid::DiscreteCurve,
     bcweights1 = bclag_interp_weights(glpoints1)
     bcweights2 = bclag_interp_weights(glpoints2)
     # Interpolation matrices for endpoints values
-    B1n2 = vec(bclag_interp_matrix(glpoints2, -1)).'
-    B2n2 = vec(bclag_interp_matrix(glpoints2,  1)).'
+    B1n2 = copy(transpose(vec(bclag_interp_matrix(glpoints2, -1))))
+    B2n2 = copy(transpose(vec(bclag_interp_matrix(glpoints2,  1))))
     # Real to complex matrix
-    OMEGAn2 = kron(eye(n2), [1.0 1.0im])            
+    OMEGAn2 = kron(Diagonal(ones(n2)), [1.0 1.0im])            
     # On-panel differentiation matrix
     DDn2 = legendre_diff_matrix(n2)
     # Matrices to send
@@ -452,14 +456,14 @@ function doublelayer_near_weights(grid::DiscreteCurve,
             for nb_idx = 1:3
                 # Load nodes on panel
                 panel_idx = neighbors[nb_idx]
-                idx = n*(panel_idx-1) + (1:n)            
+                idx = n*(panel_idx-1) .+ (1:n)            
                 zj = grid.points[1,idx] + 1im*grid.points[2,idx]
                 panel_length = sum(grid.dS[idx])
                 # Check root (preimage) of target for this panel
                 troot, _, converged = CurveDiscretization.invert_map(grid, coeffs, panel_idx, zt,
                                                                      fall_back_to_initial=false)                    
                 rho = bernstein_radius(troot)
-                rmin2 = minimum(abs2.(zt - zj))
+                rmin2 = minimum(abs2.(zt .- zj))
                 # Do nothing if ouside of near quadrature limit AND not excluded by FMM
                 if rho > NEARLIM_RADIUS_16^(16/grid.panelorder) && rmin >= (EXRAD_H*panel_length)^2
                     continue
@@ -467,7 +471,7 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                 # Load panel data
                 za = grid.edges[1, panel_idx] + 1im*grid.edges[2, panel_idx]
                 zb = grid.edges[3, panel_idx] + 1im*grid.edges[4, panel_idx]
-                idx = n*(panel_idx-1) + (1:n)                            
+                idx = n*(panel_idx-1) .+ (1:n)                            
                 nuj = grid.normals[1,idx] + 1im*grid.normals[2,idx]
                 kappa = grid.curvature[idx]    
                 zpwj = grid.dS[idx] .* nuj./1im
@@ -481,10 +485,10 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                 # FMM avoids points within EXRAD_H*panel_length, so no subtraction needed
                 for j=1:n
                     if abs2(zj[j]-zt) < ( EXRAD_H*panel_length )^2
-                        D[1:2, (1:2) + 2*(j-1)] = 0.0
+                        D[1:2, (1:2) .+ (2*(j-1))] .= 0.0
                         if ifgrad
-                            DUDXdir[1, (1:2) + 2*(j-1)] = 0.0
-                            DUDYdir[1, (1:2) + 2*(j-1)] = 0.0
+                            DUDXdir[1, (1:2) .+ (2*(j-1))] .= 0.0
+                            DUDYdir[1, (1:2) .+ (2*(j-1))] .= 0.0
                         end
                     end
                 end
@@ -498,8 +502,8 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                     Wsub = -D
                 end
                 # Check if too close to an edge
-                prev_panel_length = sum(grid.dS[n*(grid.prevpanel[panel_idx]-1) + (1:n)])
-                next_panel_length = sum(grid.dS[n*(grid.nextpanel[panel_idx]-1) + (1:n)])
+                prev_panel_length = sum(grid.dS[n*(grid.prevpanel[panel_idx]-1) .+ (1:n)])
+                next_panel_length = sum(grid.dS[n*(grid.nextpanel[panel_idx]-1) .+ (1:n)])
                 left_edge_rad  = EDGELIM_H * min(panel_length, prev_panel_length)
                 right_edge_rad = EDGELIM_H * min(panel_length, next_panel_length)
                 if abs(zt-za) > left_edge_rad && abs(zt-zb) > right_edge_rad
@@ -526,14 +530,14 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                     next_panel_idx = grid.nextpanel[panel_idx]
                     zb = grid.edges[3, next_panel_idx] + 1im*grid.edges[4, next_panel_idx]                    
                     # index list spanning both panel
-                    idx_wide = vcat(n*(panel_idx-1) + (1:n), n*(next_panel_idx-1) + (1:n))
+                    idx_wide = vcat(n*(panel_idx-1) .+ (1:n), n*(next_panel_idx-1) .+ (1:n))
                     # panels may be of different length in parameter
                     dt1 = grid.t_edges[2, panel_idx] - grid.t_edges[1, panel_idx]
                     dt2 = grid.t_edges[2, next_panel_idx] - grid.t_edges[1, next_panel_idx]
                     dt = dt1+dt2
                     ta, tb, tc = -1, dt1*2/dt-1, 1
-                    g1 = ta + (1+glpoints1)*(tb-ta)/2
-                    g2 = tb + (1+glpoints1)*(tc-tb)/2
+                    g1 = ta .+ (1 .+ glpoints1)*(tb-ta)/2
+                    g2 = tb .+ (1 .+ glpoints1)*(tc-tb)/2
                     # GL nodes of both panels, scaled into [-1,1]
                     glpoints_wide = vcat(g1, g2)
                     # Now we'll interpolate to 2*n nodes,
@@ -544,7 +548,7 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                     P2 = bclag_interp_matrix(g2, glpoints2[pts1+1:n2])
                     Pwide = zeros(n2,2n)
                     Pwide[1:pts1, 1:n] = P1
-                    Pwide[pts1+1:n2, n+(1:n)] = P2
+                    Pwide[pts1 .+ 1:n2, n .+ (1:n)] = P2
                     # Load boundary data for both panels
                     zj_wide = grid.points[1,idx_wide] + 1im*grid.points[2,idx_wide]
                     nuj_wide = grid.normals[1,idx_wide] + 1im*grid.normals[2,idx_wide]
@@ -556,7 +560,9 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                     nuj = Pwide*nuj_wide
                     kappa = Pwide*kappa_wide
                     zpj = Pwide*zpj_wide
-                    zpwj = zpj*dt/2.*glweights2
+                    
+                    zpwj = (zpj*dt/2.0) .* glweights2
+                    
                     # Find root of zt for merged panel (safer than scaling)
                     coeff = legendre_matrix(n2)*rotate_and_scale(za, zb, zj)
                     troot_guess = 1im*imag(troot)/2
@@ -575,9 +581,9 @@ function doublelayer_near_weights(grid::DiscreteCurve,
                                                        )
                     # Multiply weights with interpolation and split to the right source panels
                     # Also subtract direct interaction from current panel
-                    Wwide = Wwide * kron(Pwide, eye(2))
+                    Wwide = Wwide * kron(Pwide, eye2)
                     Wwide1 = Wwide[:,1:2*n]
-                    Wwide2 = Wwide[:,2*n+1:4*n]
+                    Wwide2 = Wwide[:,2*n .+ 1:4*n]
                     push!(weights[panel_idx], (i, Wwide1+Wsub))
                     push!(weights[next_panel_idx], (i, Wwide2))                    
                 end
@@ -648,7 +654,7 @@ function doublelayer_self(grid::DiscreteCurve,
     npoints = grid.numpoints
     u = zeros(2,npoints)
     for i=1:npoints
-        ui = 0
+        ui = zeros(2)
         zi = grid.points[:,i]
         for j = 1:i-1
             rij = grid.points[:, j] - zi
@@ -743,11 +749,11 @@ function specquad_block_matrix(grid::DiscreteCurve,
     # this will have to grow for close geometries
     blocksize = 2*panelorder
     nzblocks = 3*grid.numpanels 
-    indptr = Array{Int64}(grid.numpanels+1)
-    indices = Array{Int64}(nzblocks)
+    indptr = Array{Int64}(undef,grid.numpanels+1)
+    indices = Array{Int64}(undef,nzblocks)
     data = zeros(nzblocks, blocksize, blocksize)
-    B1 = Array{Float64}(blocksize, blocksize) # Panel-to-panel block
-    B2 = Array{Float64}(blocksize, blocksize) # Panel-to-panel block    
+    B1 = Array{Float64}(undef,blocksize, blocksize) # Panel-to-panel block
+    B2 = Array{Float64}(undef,blocksize, blocksize) # Panel-to-panel block    
     idx = 1;
     for trg_panel = 1:grid.numpanels
         indptr[trg_panel] = idx -1 # -1 for Python indexing
@@ -760,7 +766,7 @@ function specquad_block_matrix(grid::DiscreteCurve,
                 p2p_block!(B1, grid, src_panel, trg_panel, alpha, specquad=false, upsampling=false)
                 if src_panel==trg_panel
                     for i=1:panelorder
-                        B1[2*(i-1)+(1:2), 2*(i-1)+(1:2)] = 0.0
+                        B1[2*(i-1).+(1:2), 2*(i-1).+(1:2)] .= 0.0
                     end
                 end
             end
@@ -800,7 +806,7 @@ function specquad_block_matrix(grid::DiscreteCurve,
     end
     # Assemble BSR matrix
     s = pyimport("scipy.sparse")
-    A = BSR_Matrix(s[:bsr_matrix]((data, indices, indptr),
+    A = BSR_Matrix(s.bsr_matrix((data, indices, indptr),
                                   blocksize=(blocksize, blocksize)))
     return A
 end
@@ -810,8 +816,8 @@ function doublelayer_matrix(grid::DiscreteCurve,
                             alpha::Float64)
     npoints = grid.numpoints
     panelorder = grid.panelorder   
-    A = Array{Float64}(2*npoints, 2*npoints) # Output matrix
-    B = Array{Float64}(2*panelorder, 2*panelorder) # Panel-to-panel block
+    A = Array{Float64}(undef,2*npoints, 2*npoints) # Output matrix
+    B = Array{Float64}(undef,2*panelorder, 2*panelorder) # Panel-to-panel block
     for src_panel = 1:grid.numpanels
         for trg_panel = 1:grid.numpanels
             p2p_block!(B, grid, src_panel, trg_panel, alpha)
@@ -824,6 +830,8 @@ end
 @inline function p2p_block!(Bin, grid, src_panel, trg_panel, alpha;
                             upsampling=false,
                             specquad=true)
+
+    eye2 = Diagonal(ones(2))
     panelorder = numpoints = grid.panelorder
     self_panel = (trg_panel==src_panel)
     prev_panel = (trg_panel==grid.prevpanel[src_panel])
@@ -848,17 +856,17 @@ end
     end
     # Setup buffer block
     if upsample
-        B = Array{Float64}(2*2*panelorder, 2*2*panelorder)
+        B = Array{Float64}(undef,2*2*panelorder, 2*2*panelorder)
     else
         B = Bin;
     end    
     # Load sources
-    src_idx = (1:panelorder) + panelorder*(src_panel-1)
+    src_idx = (1:panelorder) .+ panelorder*(src_panel-1)
     zsrc = grid.points[1:2, src_idx]
     nsrc = grid.normals[1:2, src_idx]
     wsrc = grid.dS[src_idx]
     # Load targets
-    trg_idx = (1:panelorder) + panelorder*(trg_panel-1)
+    trg_idx = (1:panelorder) .+ panelorder*(trg_panel-1)
     ztrg = grid.points[1:2, trg_idx]
     if upsample
         P = upsampling_matrix(panelorder, 2*panelorder)
@@ -927,7 +935,7 @@ end
                     ta = intervals[idx]
                     tb = intervals[idx+1]
                     # New source points, in original frame
-                    tsrc = ta + (1+gcpoints)*(tb-ta)/2
+                    tsrc = ta .+ (1 .+ gcpoints)*(tb-ta)/2
                     # Interpolation to new source points
                     Psec = bclag_interp_matrix(glpoints, tsrc, bcweights)
                     zsrc_sec = (Psec*zsrc')'
@@ -938,7 +946,7 @@ end
                     # Target point, in new frame                   
                     ttrg_sec = (ttrg-ta)*2/(tb-ta) - 1.0                    
                     # tdist = Distance in parametrization of src panel                                        
-                    tdist = abs.(ttrg_sec - gcpoints)
+                    tdist = abs.(ttrg_sec .- gcpoints)
                     # Very empirical limit for when neighbors need special quad due to log kernel:
                     # 0.2 for 32, 0.4 for 16
                     # Too small gives nearly sing error
@@ -946,7 +954,7 @@ end
                     if minimum(tdist)<0.2*32/numsec
                         # Compute Helsing log-correction and apply to row
                         WfrakL = WfrakLcomp(ttrg_sec, gcpoints)
-                        KL = Array{Float64}(2,2)                        
+                        KL = Array{Float64}(undef,2,2)                        
                         for j=1:numsec
                             nb_wcorr = WfrakL[1, j]/gcweights[j] - log(tdist[j])
                             zi = ztrg[1:2, i]
@@ -959,7 +967,7 @@ end
                         end
                     end
                     # Add row*interpolation to output block
-                    B[2*(i-1)+(1:2), :] += R*kron(Psec, eye(2))
+                    B[2*(i-1) .+ (1:2), :] += R*kron(Psec, eye2)
                 end
             end
             
@@ -970,14 +978,14 @@ end
         dblkernel_block!(B, ztrg, zsrc, nsrc, wsrc, alpha)        
     end
     if upsample
-        Bin .= kron(Q, eye(2)) * B * kron(P, eye(2))
+        Bin .= kron(Q, eye2) * B * kron(P, eye2)
     end
 end
 
 @inline function dblkernel_block!(B, ztrg, zsrc, nsrc, wsrc, alpha)
-    K = Array{Float64}(2,2)    
-    rji = Array{Float64}(2)
-    nj = Array{Float64}(2)
+    K = Array{Float64}(undef,2,2)    
+    rji = Array{Float64}(undef,2)
+    nj = Array{Float64}(undef,2)
     numtrg = size(ztrg, 2)
     numsrc = size(zsrc, 2)
     for j=1:numsrc

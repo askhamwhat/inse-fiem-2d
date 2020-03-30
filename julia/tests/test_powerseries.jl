@@ -3,7 +3,8 @@ push!(LOAD_PATH, string(pwd(),"/src"))
 using Revise
 using SpecialFunctions
 using ModifiedStokesSolver
-using Base.Test
+using Test
+using LinearAlgebra
 
 @testset "NewPowerSeriesTests" begin
 

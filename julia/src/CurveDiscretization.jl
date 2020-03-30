@@ -1,11 +1,9 @@
 __precompile__()
 module CurveDiscretization
 
-using Compat
-using Compat.Printf
-
 using FastGaussQuadrature
 using FMMLIB2D
+using LinearAlgebra
 
 export DiscreteCurve
 export discretize
@@ -46,7 +44,7 @@ function discretize(curve, numpanels, panelorder;
         curves = curve
         Ncurves = length(curves)
         @assert length(numpanels)==Ncurves
-        dcurves = Array{DiscreteCurve}(Ncurves)
+        dcurves = Array{DiscreteCurve}(undef,Ncurves)
         for i=1:Ncurves
             dcurves[i] = discretize(curves[i], numpanels[i], panelorder, equal_arclength=equal_arclength)
         end
@@ -60,7 +58,7 @@ function discretize(curve, numpanels, panelorder;
         push!(tsplit, 2*pi)
     else
         # Equal parameter length
-        tsplit = linspace(start, stop, numpanels+1);
+        tsplit = range(start, stop=stop, length=numpanels+1);
     end
     # Prepare structures
     numpoints = numpanels*panelorder
@@ -105,7 +103,7 @@ function discretize(curve, numpanels, panelorder;
             curvature[idx] = imag(conj(zp)*zpp/abs(zp)^3)
         end
         # Get resolution estimate
-        idx = (1:panelorder) + panelorder*(i-1)
+        idx = (1:panelorder) .+ panelorder*(i-1)
         coeff = L*(dS[idx]./weights[idx])
         thisresolution = abs(coeff[end]) + abs(coeff[end-1])
         resolution = max(resolution, thisresolution)
@@ -115,8 +113,7 @@ function discretize(curve, numpanels, panelorder;
     nextpanel = circshift(1:numpanels, -1)
     curvenum = ones(Int64, numpoints)
     
-    info(@sprintf("  Grid resolution: %.2e\n", resolution))
-
+    @info "Grid resolution" resolution
     DiscreteCurve(
         panelorder,
         numpanels,
@@ -158,7 +155,7 @@ function multiply_connected(grids)
     nextpanel = Int64[]
     curvenum = Int64[]
     for i=1:length(grids)
-        assert(grids[i].panelorder == panelorder)
+        @assert grids[i].panelorder == panelorder
         # Concatenate
         edges = hcat(edges, grids[i].edges)
         n_edges = hcat(n_edges, grids[i].n_edges)        
@@ -168,8 +165,8 @@ function multiply_connected(grids)
         weights = vcat(weights, grids[i].weights)
         dS = vcat(dS, grids[i].dS)
         curvature = vcat(curvature, grids[i].curvature)
-        prevpanel = vcat(prevpanel, grids[i].prevpanel+numpanels)
-        nextpanel = vcat(nextpanel, grids[i].nextpanel+numpanels)
+        prevpanel = vcat(prevpanel, grids[i].prevpanel .+ numpanels)
+        nextpanel = vcat(nextpanel, grids[i].nextpanel .+ numpanels)
         append!(curvenum, i*ones(Int64, grids[i].numpoints))
         # Update count
         numpanels += grids[i].numpanels
@@ -203,7 +200,7 @@ function glpanels(a, b, numpanels, pedges, order)
     w = zeros(order*numpanels)
     ptr = 1
     for j = 1:numpanels
-        t[ptr:ptr+order-1] = (pedges[j+1]-pedges[j])*T/2+(pedges[j]+pedges[j+1])/2;
+        t[ptr:ptr+order-1] = (pedges[j+1]-pedges[j])*T/2 .+ (pedges[j]+pedges[j+1])/2;
         wj = W*(pedges[j+1]-pedges[j])/2
         w[ptr:ptr+order-1] = wj
         ptr = ptr + order
@@ -224,16 +221,16 @@ function traparclen(curve, N, NL=1000)
     # Original code by Rikard Ojala
     if N*2 > NL
         NL = 2*N
-        info("Using $NL Gauss-Legendre points in traparclen")
+        @info "Number of Gauss-Legendre points in traparclen" NL
     end
     order = 16
-    pedges = linspace(0, 2*pi, NL+1)
+    pedges = range(0, stop=2*pi, length=NL+1)
     T, W = glpanels(0, 2*pi, NL, pedges, order)
     zp = curve.dtau.(T)
     L = W'*abs.(zp)    
-    L2 = linspace(1/N,1-1/N,N-1)*L
+    L2 = range(1/N,stop=1-1/N,length=N-1)*L
     #Initial guess
-    t = linspace(0,2*pi,N+1)
+    t = range(0,stop=2*pi,length=N+1)
     t = t[2:end-1]
     dt = 1
     iter = 0
@@ -244,7 +241,7 @@ function traparclen(curve, N, NL=1000)
         zpt = curve.dtau.(t)
         zpT = curve.dtau.(T)        
         #Compute the cumulative sum of all the segment lengths
-        F = cumsum(sum(reshape(W.*abs.(zpT),order,N-1), 1)')
+        F = cumsum(sum(reshape(W.*abs.(zpT),order,N-1), dims=1)',dims=1)
         dt = (F-L2)./abs.(zpt)
         # Sort the parameters just in case. 
         t = vec(t - dt)
@@ -263,7 +260,7 @@ end
 function minmax_panel(grid::DiscreteCurve)
     hmin, hmax = Inf, 0.0
     for i=1:grid.numpanels
-        idx = (i-1)*grid.panelorder + (1:grid.panelorder)
+        idx = (i-1)*grid.panelorder .+ (1:grid.panelorder)
         h = sum(grid.dS[idx])
         hmin = min(hmin, h)
         hmax = max(hmax, h)
@@ -291,7 +288,7 @@ function interior_points(grid::DiscreteCurve, zt::Array{Float64})
     nnb, _ = nearest_nb_R(grid, zt, R)
     # listed points are within R of a boundary point
     # Third pass: check sign of projection against near normal
-    veryclose = zeros(interior)
+    veryclose = zero(interior)
     N = size(zt, 2)
     for i=1:N
         if nnb[i] != 0
@@ -343,8 +340,8 @@ function nearest_nb_R(grid::DiscreteCurve, zt::Array{Float64}, R::Float64)
         r2min = Inf
         imin = 0
         # Iterate over nb bins
-        for inb = ih+(-1:1)
-            for jnb = jh+(-1:1)
+        for inb = ih .+ (-1:1)
+            for jnb = jh .+ (-1:1)
                 if inb>0 && jnb>0 && inb<Nx+1 && jnb<Ny+1
                     # Compare to target points in bin
                     list = bin_lists[inb, jnb]
@@ -375,7 +372,7 @@ function binsort_points(zt, xmin, ymin, hx, hy, Nx, Ny)
     end
     # 2. Setup bin lists
     fill_ptr = ones(Int64, Nx, Ny)
-    bin_lists = Array{Array{Int64}}(Nx, Ny)
+    bin_lists = Array{Array{Int64}}(undef,Nx, Ny)
     for i=1:Nx
         for j=1:Ny
             bin_lists[i,j] = zeros(Int64, bin_count[i,j])

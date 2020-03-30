@@ -1,8 +1,9 @@
 # Test FMM matvec vs full matrix
 push!(LOAD_PATH, string(pwd(),"/src"))
-using Base.Test
+using Test
 using ModifiedStokesSolver
 import AnalyticDomains
+using LinearAlgebra
 
 @testset "Matvec" begin
     # Params

@@ -26,7 +26,7 @@ function streakplot(;X=[], Y=[], interior=[], dataname=nothing, ilist=[],
     for i=ilist
         stepnum += 1
         datafile = dataname(i)
-        info("Loading ", datafile)
+        @info "Loading " datafile
         U1,U2 = [],[]
         dt = 0.0
         @time begin

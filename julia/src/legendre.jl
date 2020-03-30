@@ -9,7 +9,7 @@ Can be used to create a downsampling matrix as well
 """
 function upsampling_matrix(n, m)
     L = legendre_matrix(n)
-    B = Array{Float64}(m, n)
+    B = Array{Float64}(undef,m, n)
     glpoints, glweights = gausslegendre(m)        
     for i=1:m
         P = GSL.sf_legendre_Pl_array(n-1, glpoints[i])
@@ -29,7 +29,7 @@ defined at the Gauss-Legendre quadrature nodes on [-1, 1] \\
 """
 function legendre_matrix(n)
     glpoints, glweights = gausslegendre(n)    
-    L = Array{Float64}(n, n)
+    L = Array{Float64}(undef,n, n)
     for i=1:n
         P = GSL.sf_legendre_Pl_array(n-1, glpoints[i])
         for j=1:n
@@ -49,7 +49,7 @@ the Gauss-Legendre quadrature nodes on [-1, 1] \\
 """
 function legendre_diff_matrix(n)
     glpoints, glweights = gausslegendre(n)    
-    dPt = Array{Float64}(n, n)
+    dPt = Array{Float64}(undef,n, n)
     for i=1:n
         _, dP = legendre_Pl_deriv_array(n-1, glpoints[i])
         for j=1:n
@@ -68,8 +68,8 @@ Recurrence relation used: [http://dlmf.nist.gov/18.9]
 As fast as the GSL implementation, but also takes x outside [-1, 1].
     """
 function legendre_Pl_deriv_array(n, x)
-    P = Array{Complex{Float64}}(n+1)
-    D = Array{Complex{Float64}}(n+1)
+    P = Array{Complex{Float64}}(undef,n+1)
+    D = Array{Complex{Float64}}(undef,n+1)
     P[1] = 1.0 # l=0
     D[1] = 0.0
     P[2] = x # l=1

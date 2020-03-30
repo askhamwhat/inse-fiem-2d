@@ -23,17 +23,17 @@ function fmm_stokeslet_direct(src, targ, str, alpha)
     ifgrad = false
     ifhess = false
 
-    charge = Array{Float64}(0)
-    dipstr = Array{Float64}(0)
-    dipvec = Array{Float64}(2,0)
+    charge = Array{Float64}(undef,0)
+    dipstr = Array{Float64}(undef,0)
+    dipvec = Array{Float64}(undef,2,0)
     quadstr = ones(ns)
-    quadvec = Array{Float64}(3,ns)
-    octstr = Array{Float64}(0)
-    octvec = Array{Float64}(4,0)
+    quadvec = Array{Float64}(undef,3,ns)
+    octstr = Array{Float64}(undef,0)
+    octvec = Array{Float64}(undef,4,0)
     
-    pottarg = Array{Float64}(nt)
-    gradtarg = Array{Float64}(2,nt)
-    hesstarg = Array{Float64}(3,nt)
+    pottarg = Array{Float64}(undef,nt)
+    gradtarg = Array{Float64}(undef,2,nt)
+    hesstarg = Array{Float64}(undef,3,nt)
 
     fmmpars = MBHFMM2DParams(alpha,src,targ,ifcharge, ifdipole,
                              ifquad, ifoct, charge, dipstr,
@@ -61,10 +61,10 @@ function fmm_stokeslet_targ(src, targ, str, alpha;
                             ifgrad::Bool=false)
     ns = size(src, 2)
     nt = size(targ, 2)
-    u = Array{Float64}(2, nt)
+    u = Array{Float64}(undef,2, nt)
     if ifgrad
-        u1grad = Array{Float64}(2, nt)
-        u2grad = Array{Float64}(2, nt)
+        u1grad = Array{Float64}(undef,2, nt)
+        u2grad = Array{Float64}(undef,2, nt)
     end
     
     ifcharge = false
@@ -75,17 +75,17 @@ function fmm_stokeslet_targ(src, targ, str, alpha;
     ifpot = true
     ifhess = false
 
-    charge = Array{Float64}(0)
-    dipstr = Array{Float64}(0)
-    dipvec = Array{Float64}(2,0)
+    charge = Array{Float64}(undef,0)
+    dipstr = Array{Float64}(undef,0)
+    dipvec = Array{Float64}(undef,2,0)
     quadstr = ones(ns)
-    quadvec = Array{Float64}(3,ns)
-    octstr = Array{Float64}(0)
-    octvec = Array{Float64}(4,0)
+    quadvec = Array{Float64}(undef,3,ns)
+    octstr = Array{Float64}(undef,0)
+    octvec = Array{Float64}(undef,4,0)
     
-    pottarg = Array{Float64}(nt)
-    gradtarg = Array{Float64}(2,0)
-    hesstarg = Array{Float64}(3,0)
+    pottarg = Array{Float64}(undef,nt)
+    gradtarg = Array{Float64}(undef,2,0)
+    hesstarg = Array{Float64}(undef,3,0)
 
     fmmpars = MBHFMM2DParams(alpha,src,targ,ifcharge, ifdipole,
                              ifquad, ifoct, charge, dipstr,
@@ -126,8 +126,8 @@ function fmm_stresslet_direct(src, targ, fvec, nvec, alpha;
     nt = size(targ, 2)
     u = zeros(2, nt)
     if ifgrad
-        u1grad = Array{Float64}(2, nt)
-        u2grad = Array{Float64}(2, nt)
+        u1grad = Array{Float64}(undef, 2, nt)
+        u2grad = Array{Float64}(undef, 2, nt)
     end
     
     ifcharge = false
@@ -138,17 +138,17 @@ function fmm_stresslet_direct(src, targ, fvec, nvec, alpha;
     ifpot = true
     ifhess = false
 
-    charge = Array{Float64}(0)
+    charge = Array{Float64}(undef,0)
     dipstr = ones(ns)
-    dipvec = Array{Float64}(2,ns)
-    quadstr = Array{Float64}(0)
-    quadvec = Array{Float64}(3,0)
+    dipvec = Array{Float64}(undef,2,ns)
+    quadstr = Array{Float64}(undef,0)
+    quadvec = Array{Float64}(undef,3,0)
     octstr = ones(ns)
-    octvec = Array{Float64}(4,ns)
+    octvec = Array{Float64}(undef,4,ns)
     
-    pottarg = Array{Float64}(nt)
-    gradtarg = Array{Float64}(2,nt)
-    hesstarg = Array{Float64}(3,nt)
+    pottarg = Array{Float64}(undef,nt)
+    gradtarg = Array{Float64}(undef,2,nt)
+    hesstarg = Array{Float64}(undef,3,nt)
 
     fmmpars = MBHFMM2DParams(alpha,src,targ,ifcharge, ifdipole,
                              ifquad, ifoct, charge, dipstr,
@@ -197,16 +197,16 @@ function fmm_stresslet_targ(fmmpars::MBHFMM2DParams,
                             ifgrad::Bool=false)
     ns = sorted_pts.ns
     nt = sorted_pts.nt
-    u = Array{Float64}(2, nt)
+    u = Array{Float64}(undef,2, nt)
     if ifgrad
-        u1grad = Array{Float64}(2, nt)
-        u2grad = Array{Float64}(2, nt)
+        u1grad = Array{Float64}(undef,2, nt)
+        u2grad = Array{Float64}(undef,2, nt)
     end
     ifpot = true
     ifhess = false
-    pottarg = Array{Float64}(nt)
-    gradtarg = Array{Float64}(2,0)
-    hesstarg = Array{Float64}(3,0)    
+    pottarg = Array{Float64}(undef,nt)
+    gradtarg = Array{Float64}(undef,2,0)
+    hesstarg = Array{Float64}(undef,3,0)    
     for j=1:2
         fmm_stresslet_pack_density!(fmmpars, fvec, nvec, alpha, j)
         fmmstor = mbhfmm2d_form(fmmpars, tree, sorted_pts)
@@ -242,13 +242,13 @@ function fmm_stresslet_self(fmmpars::MBHFMM2DParams,
                             fvec, nvec, alpha)
     ns = sorted_pts.ns
     nt = sorted_pts.nt
-    u = Array{Float64}(2, nt)    
+    u = Array{Float64}(undef,2, nt)    
     ifpot = true
     ifgrad = false
     ifhess = false
-    pottarg = Array{Float64}(nt)
-    gradtarg = Array{Float64}(2,0)
-    hesstarg = Array{Float64}(3,0)    
+    pottarg = Array{Float64}(undef,nt)
+    gradtarg = Array{Float64}(undef,2,0)
+    hesstarg = Array{Float64}(undef,3,0)    
     for j=1:2
         fmm_stresslet_pack_density!(fmmpars, fvec, nvec, alpha, j)
         fmmstor = mbhfmm2d_form(fmmpars, tree, sorted_pts)                
@@ -274,13 +274,13 @@ function fmm_stresslet_prep(src, targ, alpha;
     ifquad = false
     ifoct = true
     
-    charge = Array{Float64}(0)
+    charge = Array{Float64}(undef,0)
     dipstr = ones(ns)
-    dipvec = Array{Float64}(2,ns)
-    quadstr = Array{Float64}(0)
-    quadvec = Array{Float64}(3,0)
+    dipvec = Array{Float64}(undef,2,ns)
+    quadstr = Array{Float64}(undef,0)
+    quadvec = Array{Float64}(undef,3,0)
     octstr = ones(ns)
-    octvec = Array{Float64}(4,ns)
+    octvec = Array{Float64}(undef,4,ns)
     
     fmmpars = MBHFMM2DParams(alpha,src,targ,ifcharge, ifdipole,
                              ifquad, ifoct, charge, dipstr,

@@ -16,8 +16,8 @@ using Vandermonde
     #WfrakL = WfrakLcomp(trans, scale, glpoints)
     WfrakL = WfrakLcomp(glpoints_scaled, glpoints)
     # Assemble block (including diagonal)
-    KL = Array{Float64}(2,2)
-    tdist = Array{Float64}(numpoints)
+    KL = Array{Float64}(undef,2,2)
+    tdist = Array{Float64}(undef,numpoints)
     for i=1:numpoints
         # tdist = Distance in parametrization of src panel
         @. tdist = abs(glpoints_scaled[i] - glpoints[:])
@@ -142,14 +142,14 @@ function modifiedweights(za::Complex{Float64},
     npt = length(zj)
     # Transform endpoints to [-1,1]
     dz = (zb-za)/2
-    ztr = (z-(zb+za)/2)/dz
-    zjtr = (zj-(zb+za)/2)/dz
-    p = Array{Complex{Float64}}(npt+1)
-    q = Array{Complex{Float64}}(npt)
-    r = Array{Complex{Float64}}(npt)
-    s = Array{Complex{Float64}}(npt)
+    ztr = (z - (zb+za)/2)/dz
+    zjtr = (zj .- (zb+za)/2)/dz
+    p = Array{Complex{Float64}}(undef,npt+1)
+    q = Array{Complex{Float64}}(undef,npt)
+    r = Array{Complex{Float64}}(undef,npt)
+    s = Array{Complex{Float64}}(undef,npt)
     
-    c = (1-(-1).^(1:npt))./(1:npt)
+    c = (1 .- (-1).^(1:npt))./(1:npt)
     p[1] = log(1-ztr) - log(-1-ztr)
     p1 = log(1-ztr) + log(-1-ztr)
     # Signs here depend on how we have defined
@@ -169,8 +169,8 @@ function modifiedweights(za::Complex{Float64},
         s[k+1] = ztr*s[k] + r[k]
     end
     
-    q[1:2:npt-1] = p1 - p[2:2:npt]
-    q[2:2:npt] = p[1] - p[3:2:npt+1]
+    q[1:2:npt-1] = p1 .- p[2:2:npt]
+    q[2:2:npt] = p[1] .- p[3:2:npt+1]
     q = q./(1:npt)
     # Bjorck-Pereyra solve
     wL = pvand(zjtr, q)*dz

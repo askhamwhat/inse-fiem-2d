@@ -5,7 +5,9 @@ push!(LOAD_PATH, string(pwd(),"/src"))
 import IterativeSolvers
 using ModifiedStokesSolver
 import AnalyticDomains
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 @testset "IntegralEquation" begin
     # Run over large alpha span
@@ -20,15 +22,15 @@ using Base.Test
             
             # Setup a problem
             xsrc = [2.0, 2.0]
-            srand(1)
-            qsrc = 1-2*rand(2)
-            nsrc = 1-2*rand(2)
-            fsrc = 1-2*rand(2)
+            Random.seed!(1)
+            qsrc = 1 .- 2*rand(2)
+            nsrc = 1 .- 2*rand(2)
+            fsrc = 1 .- 2*rand(2)
             ubc(x) = stresslet(x-xsrc, qsrc, nsrc, alpha) +
                 stokeslet(x-xsrc, fsrc, alpha)
 
-            src = [2.0 2.0]'
-            str = [-3.0 5.0]'
+            src = copy(transpose([2.0 2.0]))
+            str = copy(transpose([-3.0 5.0]))
             ureffunc(targ) = fmm_stokeslet_targ(src, targ, str, alpha)
             urefgradfunc(targ) = fmm_stokeslet_targ(src, targ, str, alpha; ifgrad=true)    
             ubc(x) = ureffunc(hcat(x,x))[:,1]
@@ -37,7 +39,7 @@ using Base.Test
             # Right hand side
             rhs = zeros(2*N)
             for i=1:dcurve.numpoints
-                rhs[2(i-1)+(1:2)] = ubc(dcurve.points[:,i])
+                rhs[2(i-1) .+ (1:2)] = ubc(dcurve.points[:,i])
             end
 
             # Dense matrix lhs
@@ -75,17 +77,17 @@ using Base.Test
                 g = [g1 g2]
                 gradref = [grad1ref grad2ref]
                 grad_relerr_near = maximum(abs.(g-gradref)) / maximum(abs.(gradref))
-                @test grad_relerr_near < 2e-10
+                @test grad_relerr_near < 4e-10
                 # Grid
                 Ngrid = 20
                 xmax = maximum(dcurve.points[1,:])
                 xmin = minimum(dcurve.points[1,:])
                 ymax = maximum(dcurve.points[2,:])
                 ymin = minimum(dcurve.points[2,:])
-                x = linspace(xmin, xmax, Ngrid)
-                y = linspace(ymin, ymax, Ngrid)
+                x = range(xmin, stop=xmax, length=Ngrid)
+                y = range(ymin, stop=ymax, length=Ngrid)
                 X, Y = ndgrid(x, y)
-                zt = [vec(X) vec(Y)]'
+                zt = copy(transpose([vec(X) vec(Y)]))
 
                 interior = interior_points(dcurve, zt)
                 numeval = sum(interior)
@@ -97,7 +99,7 @@ using Base.Test
                 unorm = norm(vec(uref), Inf)
                 # Error
                 err = u .- uref
-                maxerr = Array{Float64}(numeval)
+                maxerr = Array{Float64}(undef,numeval)
                 for i=1:numeval
                     maxerr[i] = norm(err[:, i], Inf)
                 end

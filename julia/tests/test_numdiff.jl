@@ -1,7 +1,9 @@
 push!(LOAD_PATH, string(pwd(),"/src"))
 
 using ModifiedStokesSolver
-using Base.Test
+using Test
+using LinearAlgebra
+using Random
 
 @testset "NumDiff" begin
 
@@ -24,17 +26,17 @@ using Base.Test
     function numlap(F, r, h)
         hx = [h, 0]
         hy = [0, h]
-        Fxx = (F(r.+hx) .-2.*F(r) .+ F(r.-hx)) ./ (h^2)
-        Fyy = (F(r.+hy) .-2.*F(r) .+ F(r.-hy)) ./ (h^2)
+        Fxx = (F(r.+hx) .- (2 .* F(r)) .+ F(r.-hx)) ./ (h^2)
+        Fyy = (F(r.+hy) .- (2 .* F(r)) .+ F(r.-hy)) ./ (h^2)
         return Fxx .+ Fyy
     end
 
 
     h = 1e-4
-    srand(1)
-    r = 1 .- 2.*rand(2)
-    f = 1 .- 2.*rand(2)
-    n = 1 .- 2.*rand(2)
+    Random.seed!(1)
+    r = 1 .- 2 .* rand(2)
+    f = 1 .- 2 .* rand(2)
+    n = 1 .- 2 .* rand(2)
     a = rand()
     rnorm = sqrt(sum(r.^2))
     println("a|r| = ", a*rnorm)
@@ -46,7 +48,7 @@ using Base.Test
     Lp = numlap(r -> pressure(r, f, a), r, h)
     Lu = numlap(r -> stokeslet(r, f, a), r, h)
     gradp = numgrad(r -> pressure(r, f, a), r, h)
-    pde = a^2.*u .- Lu .+ gradp
+    pde = (a^2) .* u .- Lu .+ gradp
 
     println("u = ",u)
     println("div u = ",divu)
