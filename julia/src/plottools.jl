@@ -1,11 +1,10 @@
-using NullableArrays
 using PyCall
-@pyimport numpy.ma as ma
-PyObject(a::NullableArray) =  pycall(ma.array, Any, a.values, mask=a.isnull)
+ma = pyimport("numpy.ma")
+PyObject(a,mask) =  pycall(ma.array, Any, a, mask=mask)
 
 function interior_pcolor(xx, yy, ff, interior_mask; vmin=nothing, vmax=nothing, cmap=nothing)
-    P = NullableArray(ff, .!reshape(interior_mask, size(ff)))
-    pcolormesh(xx, yy, PyObject(P), vmin=vmin, vmax=vmax, cmap=cmap)
+    mask = reshape(.!interior_mask,size(ff))
+    pcolormesh(xx, yy, PyObject(ff,mask), vmin=vmin, vmax=vmax, cmap=cmap)
 end
 
 function plot_boundary(dcurve, style="-k")

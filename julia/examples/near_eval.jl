@@ -8,6 +8,8 @@ import IterativeSolvers
 import LinearMaps
 import AnalyticDomains
 using ModifiedStokesSolver
+using LinearAlgebra
+using Random
 
 include("../src/plottools.jl")
 
@@ -26,16 +28,16 @@ N = dcurve.numpoints
 if solve_inteq
     # Setup a problem
     xsrc = [5.0, 5.0]
-    srand(1)
-    qsrc = 1-2*rand(2)
-    nsrc = 1-2*rand(2)
-    fsrc = 1-2*rand(2)
+    Random.seed!(1)
+    qsrc = 1 .- 2*rand(2)
+    nsrc = 1 .- 2*rand(2)
+    fsrc = 1 .- 2*rand(2)
     ubc(x) = stresslet(x-xsrc, qsrc, nsrc, alpha) +
         stokeslet(x-xsrc, fsrc, alpha)
     # Right hand side
     rhs = zeros(2*N)
     for i=1:dcurve.numpoints
-        rhs[2(i-1)+(1:2)] = ubc(dcurve.points[:,i])
+        rhs[2(i-1) .+ (1:2)] = ubc(dcurve.points[:,i])
     end
 
     # FMM lhs
@@ -75,14 +77,14 @@ ymax = 0.6
 
 N = 200
 # Points sent to pcolor
-xplot = linspace(xmin, xmax, N)
-yplot = linspace(ymin, ymax, N)
+xplot = range(xmin, stop=xmax, length=N)
+yplot = range(ymin, stop=ymax, length=N)
 # Create ndgrid using centroids
 xcen = (xplot[1:end-1] + xplot[2:end])/2
 ycen = (yplot[1:end-1] + yplot[2:end])/2
 X, Y = ndgrid(xcen, ycen)
 # Vector of grid points
-zt = [vec(X) vec(Y)]'
+zt = copy(transpose([vec(X) vec(Y)]))
 # Get interior point mask
 interior = interior_points(dcurve, zt)
 numeval = sum(interior)
@@ -109,14 +111,14 @@ println("  ", norm(vec(u)-vec(uotf),Inf))
 
 println("* Computing error")
 # Reference
-uref = Array{Float64}(2, numeval)    
+uref = Array{Float64}(undef,2, numeval)    
 for i=1:numeval
     uref[:,i] = ubc(zt_interior[:, i])
 end
 unorm = norm(vec(uref), Inf)
 # Error
 err = u .- uref
-maxerr = Array{Float64}(numeval)
+maxerr = Array{Float64}(undef,numeval)
 for i=1:numeval
     maxerr[i] = norm(err[:, i], Inf)
 end
@@ -125,7 +127,7 @@ println("Maxerr on grid: ", norm(vec(maxerr), Inf))
 E = zeros(N-1,N-1)
 E[interior] = maxerr
 Erel = E / unorm
-logE = log10.(Erel+1e-100)
+logE = log10.(Erel .+ 1e-100)
 
 
 
@@ -135,7 +137,7 @@ clf()
 interior_pcolor(X, Y, logE, interior, vmin=-16, vmax=0)
 
 cbar = colorbar()
-cbar[:set_label]("Rel. error")
+cbar.set_label("Rel. error")
 plot(dcurve.points[1,:], dcurve.points[2,:], ".-k")
 axis("image")
 axis([xmin, xmax, ymin, ymax])

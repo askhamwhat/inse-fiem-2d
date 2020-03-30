@@ -12,7 +12,7 @@ Also note that the fast direct solver for the modified Stokes equation is not in
 # Setup & Build
 
 * Make sure you have the following installed:
-    - Julia 0.6 (0.7 or higher will not work)
+    - Julia 1.1 (higher versions not yet tested)
     - python-matplotlib
     - python-scipy
     - python-sympy
