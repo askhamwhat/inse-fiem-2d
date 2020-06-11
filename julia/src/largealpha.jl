@@ -1,7 +1,7 @@
 # Routines used when dealing with quadrature for large alpha
 
-LARGEALPHA_LIMIT_16 = 4.5
-LARGEALPHA_LIMIT_32 = 4.5
+global LARGEALPHA_LIMIT_16 = 4.5
+global LARGEALPHA_LIMIT_32 = 4.5
 
 function set_largealpha_limit_16(x)
     global LARGEALPHA_LIMIT_16 = x

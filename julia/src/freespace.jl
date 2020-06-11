@@ -1,7 +1,8 @@
 include("../../external/mbh2dfmm/julia/modbhrouts.jl")
 
-using FINUFFT
 using FFTW
+
+using FINUFFT
 using SpecialFunctions
 
 ## FREESPACE SOLVER WITH NUFFT

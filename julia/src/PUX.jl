@@ -6,8 +6,8 @@ mydir = Base.Filesystem.dirname(Base.source_path())
 const PUX_MATLAB_SRC = "$(mydir)/../../external/pux"
 const RBFQR_MATLAB_SRC = "$(mydir)/../../external/rbf-qr"
 
-using MATLAB
 using PyPlot
+using MATLAB
 using CurveDiscretization
 using Printf
 using LinearAlgebra

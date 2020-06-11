@@ -31,7 +31,8 @@ LDFLAGS = -shared
 OBJSUF=o
 MODSUF=mod
 FC=gfortran
-FFLAGS=$(DBG) -O3 $(OPENMP) -fPIC -cpp
+FFLAGS=$(DBG) -O3 $(OPENMP) -fPIC
+LIBS= -lgomp
 
 else
 
@@ -45,7 +46,8 @@ LDFLAGS = -shared
 OBJSUF=o
 MODSUF=mod
 FC=gfortran
-FFLAGS=$(DBG) -O3 $(OPENMP) -fPIC -cpp #-DVERBOSE
+FFLAGS=$(DBG) -O3 $(OPENMP) -fPIC #-DVERBOSE
+LIBS=-lgomp
 
 endif
 endif
@@ -66,7 +68,7 @@ setup_dir:
 all: lib
 
 lib: setup_dir $(MODS) $(OBJS) 
-	cd $(BIN_DIR); $(FC) $(LDFLAGS) -o $(LIBNAME) $(OBJS)
+	cd $(BIN_DIR); $(FC) $(LDFLAGS) -o $(LIBNAME) $(OBJS) $(LIBS)
 
 clean:
 	cd $(BIN_DIR); rm -f *

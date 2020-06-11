@@ -383,11 +383,7 @@ c
       real *8 rscale, sum1, times(20)
 c
 c
-#ifdef VERBOSE
-      ifp = 1
-#else
       ifp = 0      
-#endif
 
       allocate(iflagnorth(nboxes),iflageast(nboxes),iflagsouth(nboxes),
      1     iflagwest(nboxes))

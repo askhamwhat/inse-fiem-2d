@@ -31,6 +31,8 @@ export fmm_stresslet_targ, fmm_stresslet_self
 export ndgrid, interior_points
 export fs_modstokes, per_modstokes, per_gradient
 
+include("largealpha.jl")
+
 include("../../external/mbh2dfmm/julia/ModStokesFMM2D.jl")
 include("types.jl")
 include("helsing.jl")
@@ -43,7 +45,6 @@ include("sparse.jl")
 include("freespace.jl")
 include("periodic.jl")
 include("matlab_compat.jl")
-include("largealpha.jl")
 
 function __init__()
     # Load libgomp for FMM

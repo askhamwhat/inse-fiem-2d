@@ -1,5 +1,5 @@
-using Compat
-using Compat.Libdl
+
+using Libdl
 
 const LIBMBHFMM2D = string(Base.Filesystem.dirname(Base.source_path()), "/../bin/libmbhfmm2d")
 
@@ -7,7 +7,7 @@ include("BoxFMMType.jl")
 include("BoxFMMUtil.jl")
 
 # Load OpenMP library
-Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+dlopen("libgomp", Libdl.RTLD_GLOBAL)
 
 mutable struct MBHFMM2DParams
 
